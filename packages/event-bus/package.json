@@ -1,0 +1,15 @@
+{
+  "name": "@motiva/event-bus",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "reflect-metadata": "^0.1.14",
+    "rxjs": "^7.8.2",
+    "tslib": "^2.3.0"
+  }
+}

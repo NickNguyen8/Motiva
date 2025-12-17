@@ -1,0 +1,25 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@motiva/event-bus": ["packages/event-bus/src/index.ts"],
+      "@motiva/contracts": ["packages/contracts/src/index.ts"],
+      "@motiva/blockchain": ["packages/blockchain/src/index.ts"],
+      "@motiva/shared-kernel": ["packages/shared-kernel/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

@@ -1,0 +1,210 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------
+// 1. Identity & Profile
+// ------------------------------------------
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String?
+  role          UserRole  @default(EMPLOYEE)
+  walletAddress String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  employeeProfile    EmployeeProfile?
+  contributions      Contribution[]
+  pointLedgerEntries PointLedger[]
+  stockLedgerEntries InternalStockLedger[]
+  tokenSnapshots     TokenSnapshot[]
+  yearlySnapshots    YearlyRewardSnapshot[]
+  auditLogs          AuditLog[]
+}
+
+model EmployeeProfile {
+  id        String          @id @default(uuid())
+  userId    String          @unique
+  user      User            @relation(fields: [userId], references: [id])
+  department String
+  role      String
+  startDate DateTime
+  status    EmployeeStatus
+  version   Int             @default(1) // Optimistic locking
+  
+  @@index([department])
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  TERMINATED
+  ALUMNI
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+// ------------------------------------------
+// 2. Contributions & Rewards
+// ------------------------------------------
+
+model RewardRuleVersion {
+  id         String    @id @default(uuid())
+  version    String    @unique // e.g., "2025.v1"
+  rulesJson  Json      // The formulas/weights
+  activeFrom DateTime  @default(now())
+  activeTo   DateTime?
+
+  contributions Contribution[]
+}
+
+model Contribution {
+  id               String             @id @default(uuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id])
+  type             ContributionType
+  externalId       String?            // e.g., GitHub PR ID
+  status           ContributionStatus @default(PENDING)
+  pointsCalculated Decimal?           @db.Decimal(20, 4)
+  rewardRuleId     String?
+  rewardRule       RewardRuleVersion? @relation(fields: [rewardRuleId], references: [id])
+  auditLogId       String?
+  
+  // Relations
+  pointLedgerEntries PointLedger[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([externalId])
+}
+
+enum ContributionType {
+  PR
+  JIRA_TICKET
+  MANUAL
+  BONUS
+}
+
+enum ContributionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ------------------------------------------
+// 3. Financial Ledgers (The "Truth")
+// ------------------------------------------
+
+model PointLedger {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  amount         Decimal         @db.Decimal(20, 4) // Positive for earnings, Negative for distinct spend
+  reason         String
+  referenceId    String?         // FK to Contribution.id or Bonus.id (loose coupling via ID)
+  contribution   Contribution?   @relation(fields: [referenceId], references: [id]) // Optional strict link
+  transactionType LedgerTxType
+  occurredAt     DateTime        @default(now())
+  balanceSnapshot Decimal        @db.Decimal(20, 4) // Running balance AFTER this tx
+
+  @@index([userId, occurredAt])
+}
+
+enum LedgerTxType {
+  EARN
+  REDEEM
+  EXPIRE
+  CONVERT_TO_TOKEN
+}
+
+model InternalStockLedger {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  grantId       String
+  action        StockAction
+  quantity      Decimal     @db.Decimal(20, 4)
+  vestingDate   DateTime?
+  exercisePrice Decimal?    @db.Decimal(20, 4)
+  occurredAt    DateTime    @default(now())
+  auditLogId    String?
+
+  @@index([userId, grantId])
+}
+
+enum StockAction {
+  GRANT
+  VEST
+  EXERCISE
+  CANCEL
+}
+
+// ------------------------------------------
+// 4. Blockchain Sync
+// ------------------------------------------
+
+model TokenSnapshot {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  walletAddress String
+  onChainBalance Decimal @db.Decimal(78, 0) // UInt256 equivalent
+  blockNumber   BigInt
+  syncedAt      DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ------------------------------------------
+// 5. Metadata & Audit
+// ------------------------------------------
+
+model BonusSnapshot {
+  id               String   @id @default(uuid())
+  name             String
+  totalDistributed Decimal  @db.Decimal(20, 4)
+  finalizedAt      DateTime @default(now())
+}
+
+model YearlyRewardSnapshot {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  year              Int
+  totalPointsEarned Decimal  @db.Decimal(20, 4)
+  totalStockVested  Decimal  @db.Decimal(20, 4)
+
+  @@unique([userId, year])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  user        User?    @relation(fields: [actorUserId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+}

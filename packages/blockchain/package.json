@@ -1,0 +1,14 @@
+{
+    "name": "@motiva/blockchain",
+    "version": "0.0.1",
+    "private": true,
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+        "@openzeppelin/contracts-upgradeable": "^5.4.0",
+        "@openzeppelin/hardhat-upgrades": "^3.9.1",
+        "ethers": "^6.16.0",
+        "hardhat": "^2.28.0",
+        "ts-node": "10.9.1",
+        "typescript": "~5.9.3"
+    }
+}
