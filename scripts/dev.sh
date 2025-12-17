@@ -95,7 +95,7 @@ echo "🖥 Checking web..."
 
 if ! is_port_open 4200; then
   # Optimization: Use Turbopack
-  run_bg "web" pnpm nx dev web --maxParallel=1 --turbo
+  run_bg "web" pnpm nx dev web --maxParallel=1 --turbo --port 4200
 else
   echo "✅ Web already running"
 fi
